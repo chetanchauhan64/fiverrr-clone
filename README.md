@@ -91,7 +91,7 @@ The application should now be running locally.
 
 ## 📸 Screenshots
 
-
+![Home Page](homepage.png)
 
 Example:
 
