@@ -5,6 +5,7 @@ import {
   setUserImage,
   setUserInfo,
   signup,
+  socialLogin,
 } from "../controllers/AuthControllers.js";
 import { verifyToken } from "../middlewares/AuthMiddleware.js";
 import multer from "multer";
@@ -14,6 +15,7 @@ const upload = multer({ dest: "uploads/profiles/" });
 
 authRoutes.post("/signup", signup);
 authRoutes.post("/login", login);
+authRoutes.post("/social-login", socialLogin);
 authRoutes.post("/get-user-info", verifyToken, getUserInfo);
 authRoutes.post("/set-user-info", verifyToken, setUserInfo);
 

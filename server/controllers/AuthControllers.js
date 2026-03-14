@@ -167,3 +167,42 @@ export const setUserImage = async (req, res, next) => {
     res.status(500).send("Internal Server Occured");
   }
 };
+
+export const socialLogin = async (req, res, next) => {
+  try {
+    const prisma = new PrismaClient();
+    const { email, name, profileImage } = req.body;
+    
+    if (email) {
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        const newUser = await prisma.user.create({
+          data: {
+            email,
+            username: name.toLowerCase().split(" ").join(""),
+            fullName: name,
+            profileImage,
+            isProfileInfoSet: true,
+          },
+        });
+        return res.status(201).json({
+          user: { id: newUser.id, email: newUser.email },
+          jwt: createToken(email, newUser.id),
+        });
+      } else {
+        return res.status(200).json({
+          user: { id: user.id, email: user.email },
+          jwt: createToken(email, user.id),
+        });
+      }
+    } else {
+      return res.status(400).send("Email Required");
+    }
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send("Internal Server Error");
+  }
+};
