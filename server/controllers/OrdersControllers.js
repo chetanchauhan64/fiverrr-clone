@@ -14,9 +14,7 @@ export const createOrder = async (req, res, next) => {
       const paymentIntent = await stripe.paymentIntents.create({
         amount: gig?.price * 100,
         currency: "usd",
-        automatic_payment_methods: {
-          enabled: true,
-        },
+        payment_method_types: ["card"],
       });
       await prisma.orders.create({
         data: {
@@ -41,12 +39,19 @@ export const createOrder = async (req, res, next) => {
 export const confirmOrder = async (req, res, next) => {
   try {
     if (req.body.paymentIntent) {
-      const prisma = new PrismaClient();
-      await prisma.orders.update({
-        where: { paymentIntent: req.body.paymentIntent },
-        data: { isCompleted: true },
-      });
+      const paymentIntent = await stripe.paymentIntents.retrieve(req.body.paymentIntent);
+      if (paymentIntent.status === "succeeded") {
+        const prisma = new PrismaClient();
+        await prisma.orders.update({
+          where: { paymentIntent: req.body.paymentIntent },
+          data: { isCompleted: true },
+        });
+        return res.status(200).send("Order confirmed.");
+      } else {
+        return res.status(400).send("Payment not successful.");
+      }
     }
+    return res.status(400).send("Payment intent ID is required.");
   } catch (err) {
     console.log(err);
     return res.status(500).send("Internal Server Error");
