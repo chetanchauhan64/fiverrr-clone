@@ -20,11 +20,23 @@ model User {
   profileImage String?
   isProfileInfoSet Boolean? @default(false)
   createdAt DateTime @default(now())
+  role String @default("user")
+  status String @default("active")
   gigs Gigs[]
   orders Orders[]
   reviews Reviews[]
   messagesSent Message[] @relation("sentMessages")
   messagesReceived Message[] @relation("receivedMessages")
+  loginLogs LoginLog[]
+}
+
+model LoginLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  ipAddress String?
+  loginTime DateTime @default(now())
 }
 
 model Gigs {
@@ -39,7 +51,8 @@ model Gigs {
   shortDesc String
   createdAt DateTime @default(now())
   images String[]
-  createdBy User @relation(fields: [userId], references: [id])
+  status String @default("active")
+  createdBy User @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId Int
   orders Orders[]
   reviews Reviews[]
@@ -49,11 +62,11 @@ model Gigs {
 model Orders {
   id Int @id @default(autoincrement())
   createdAt DateTime @default(now())
-  buyer User @relation(fields: [buyerId],references: [id])
+  buyer User @relation(fields: [buyerId],references: [id], onDelete: Cascade)
   buyerId Int
   paymentIntent String @unique
   isCompleted Boolean @default(false)
-  gig Gigs @relation(fields:[gigId],references: [id])
+  gig Gigs @relation(fields:[gigId],references: [id], onDelete: Cascade)
   gigId Int
   price Int
   messages Message[]
@@ -64,9 +77,9 @@ model Reviews {
   createdAt DateTime @default(now())
   rating Int
   reviewText String?
-  gig Gigs @relation(fields:[gigId],references: [id])
+  gig Gigs @relation(fields:[gigId],references: [id], onDelete: Cascade)
   gigId Int
-  reviewer User @relation(fields: [reviewerId],references: [id])
+  reviewer User @relation(fields: [reviewerId],references: [id], onDelete: Cascade)
   reviewerId Int
 } 
 
@@ -75,10 +88,10 @@ model Message {
   text String
   createdAt DateTime @default(now())
   isRead Boolean @default(false)
-  sender User @relation("sentMessages", fields: [senderId], references: [id])
+  sender User @relation("sentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   senderId Int
-  recipient User @relation("receivedMessages", fields: [recipientId], references: [id])
+  recipient User @relation("receivedMessages", fields: [recipientId], references: [id], onDelete: Cascade)
   recipientId Int
-  order Orders @relation(fields: [orderId], references: [id])
+  order Orders @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId Int
 }

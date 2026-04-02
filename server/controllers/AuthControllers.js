@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, prisma } from "../utils/prisma.js";
 import { genSalt, hash, compare } from "bcrypt";
 import jwt from "jsonwebtoken";
 import { renameSync } from "fs";
@@ -18,7 +18,6 @@ const createToken = (email, userId) => {
 
 export const signup = async (req, res, next) => {
   try {
-    const prisma = new PrismaClient();
     const { email, password } = req.body;
     if (email && password) {
       const user = await prisma.user.create({
@@ -28,7 +27,12 @@ export const signup = async (req, res, next) => {
         },
       });
       return res.status(201).json({
-        user: { id: user?.id, email: user?.email },
+        user: {
+          id: user?.id,
+          email: user?.email,
+          role: user?.role,
+          status: user?.status,
+        },
         jwt: createToken(email, user.id),
       });
     } else {
@@ -49,12 +53,14 @@ export const signup = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   try {
-    const prisma = new PrismaClient();
     const { email, password } = req.body;
     if (email && password) {
-      const user = await prisma.user.findUnique({
+      const user = await prisma.user.findFirst({
         where: {
-          email,
+          OR: [
+            { email: email },
+            { username: email }
+          ]
         },
       });
       if (!user) {
@@ -66,8 +72,26 @@ export const login = async (req, res, next) => {
         return res.status(400).send("Invalid Password");
       }
 
+      const ipAddress = req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+      try {
+        await prisma.loginLog.create({
+          data: {
+            userId: user.id,
+            email: user.email,
+            ipAddress: typeof ipAddress === "string" ? ipAddress : JSON.stringify(ipAddress),
+          },
+        });
+      } catch (logError) {
+        console.error("Login logging failed:", logError.message);
+      }
+
       return res.status(200).json({
-        user: { id: user?.id, email: user?.email },
+        user: {
+          id: user?.id,
+          email: user?.email,
+          role: user?.role,
+          status: user?.status,
+        },
         jwt: createToken(email, user.id),
       });
     } else {
@@ -81,10 +105,9 @@ export const login = async (req, res, next) => {
 export const getUserInfo = async (req, res, next) => {
   try {
     if (req?.userId) {
-      const prisma = new PrismaClient();
-      const user = await prisma.user.findUnique({
+        const user = await prisma.user.findUnique({
         where: {
-          id: req.userId,
+          id: parseInt(req.userId),
         },
       });
       return res.status(200).json({
@@ -96,28 +119,33 @@ export const getUserInfo = async (req, res, next) => {
           fullName: user?.fullName,
           description: user?.description,
           isProfileSet: user?.isProfileInfoSet,
+          role: user?.role,
+          status: user?.status,
         },
       });
     }
   } catch (err) {
-    res.status(500).send("Internal Server Occured");
+    res.status(500).send("Internal Server Occurred");
   }
 };
 
 export const setUserInfo = async (req, res, next) => {
   try {
     if (req?.userId) {
+      console.log("Setting user info for ID:", req.userId);
       const { userName, fullName, description } = req.body;
+      console.log("Received data:", { userName, fullName, description });
+      
       if (userName && fullName && description) {
-        const prisma = new PrismaClient();
         const userNameValid = await prisma.user.findUnique({
           where: { username: userName },
         });
-        if (userNameValid) {
+        if (userNameValid && userNameValid.id !== parseInt(req.userId)) {
+          console.log("Username taken:", userName);
           return res.status(200).json({ userNameError: true });
         }
         await prisma.user.update({
-          where: { id: req.userId },
+          where: { id: parseInt(req.userId) },
           data: {
             username: userName,
             fullName,
@@ -127,12 +155,19 @@ export const setUserInfo = async (req, res, next) => {
         });
         return res.status(200).send("Profile data updated successfully.");
       } else {
+        const missing = [];
+        if (!userName) missing.push("userName");
+        if (!fullName) missing.push("fullName");
+        if (!description) missing.push("description");
+        console.log("Missing fields:", missing);
         return res
           .status(400)
-          .send("Username, Full Name and description should be included.");
+          .send(`Missing fields: ${missing.join(", ")}`);
       }
     }
+    return res.status(401).send("Unauthorized");
   } catch (err) {
+    console.error("Error in setUserInfo:", err);
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       if (err.code === "P2002") {
         return res.status(400).json({ userNameError: true });
@@ -151,26 +186,24 @@ export const setUserImage = async (req, res, next) => {
         const date = Date.now();
         let fileName = "uploads/profiles/" + date + req.file.originalname;
         renameSync(req.file.path, fileName);
-        const prisma = new PrismaClient();
-
+    
         await prisma.user.update({
-          where: { id: req.userId },
+          where: { id: parseInt(req.userId) },
           data: { profileImage: fileName },
         });
         return res.status(200).json({ img: fileName });
       }
       return res.status(400).send("Cookie Error.");
     }
-    return res.status(400).send("Image not inclued.");
+    return res.status(400).send("Image not included.");
   } catch (err) {
     console.log(err);
-    res.status(500).send("Internal Server Occured");
+    res.status(500).send("Internal Server Occurred");
   }
 };
 
 export const socialLogin = async (req, res, next) => {
   try {
-    const prisma = new PrismaClient();
     const { email, name, profileImage } = req.body;
     
     if (email) {
@@ -188,13 +221,49 @@ export const socialLogin = async (req, res, next) => {
             isProfileInfoSet: true,
           },
         });
+        const ipAddress = req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+        try {
+          await prisma.loginLog.create({
+            data: {
+              userId: newUser.id,
+              email: newUser.email,
+              ipAddress: typeof ipAddress === "string" ? ipAddress : JSON.stringify(ipAddress),
+            },
+          });
+        } catch (logError) {
+          console.error("Social login logging failed:", logError.message);
+        }
+
         return res.status(201).json({
-          user: { id: newUser.id, email: newUser.email },
+          user: {
+            id: newUser.id,
+            email: newUser.email,
+            role: newUser.role,
+            status: newUser.status,
+          },
           jwt: createToken(email, newUser.id),
         });
       } else {
+        const ipAddress = req.ip || req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+        try {
+          await prisma.loginLog.create({
+            data: {
+              userId: user.id,
+              email: user.email,
+              ipAddress: typeof ipAddress === "string" ? ipAddress : JSON.stringify(ipAddress),
+            },
+          });
+        } catch (logError) {
+          console.error("Social login logging failed:", logError.message);
+        }
+
         return res.status(200).json({
-          user: { id: user.id, email: user.email },
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            status: user.status,
+          },
           jwt: createToken(email, user.id),
         });
       }

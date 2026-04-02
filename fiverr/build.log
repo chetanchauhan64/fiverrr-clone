@@ -1,0 +1,26 @@
+
+> fiverr@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 3.6s
+  Running TypeScript ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/29) ...
+Γ¿» useSearchParams() should be wrapped in a suspense boundary at page "/search". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at Q (C:\Users\zadav\OneDrive\Desktop\Fiver - Copy\fiverr\.next\server\chunks\ssr\node_modules_next_920e7746._.js:2:2111)
+    at o (C:\Users\zadav\OneDrive\Desktop\Fiver - Copy\fiverr\.next\server\chunks\ssr\node_modules_next_920e7746._.js:4:5284)
+    at C:\Users\zadav\OneDrive\Desktop\Fiver - Copy\fiverr\.next\server\chunks\ssr\_4591d5c7._.js:1:2377
+    at an (C:\Users\zadav\OneDrive\Desktop\Fiver - Copy\fiverr\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:84360)
+    at ai (C:\Users\zadav\OneDrive\Desktop\Fiver - Copy\fiverr\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:86179)
+    at al (C:\Users\zadav\OneDrive\Desktop\Fiver - Copy\fiverr\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:107953)
+    at as (C:\Users\zadav\OneDrive\Desktop\Fiver - Copy\fiverr\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:105368)
+    at aa (C:\Users\zadav\OneDrive\Desktop\Fiver - Copy\fiverr\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:84712)
+    at ai (C:\Users\zadav\OneDrive\Desktop\Fiver - Copy\fiverr\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:86228)
+    at ai (C:\Users\zadav\OneDrive\Desktop\Fiver - Copy\fiverr\node_modules\next\dist\compiled\next-server\app-page-turbo.runtime.prod.js:2:104708)
+Error occurred prerendering page "/search". Read more: https://nextjs.org/docs/messages/prerender-error
+Export encountered an error on /search/page: /search, exiting the build.
+Γ¿» Next.js build worker exited with code: 1 and signal: null

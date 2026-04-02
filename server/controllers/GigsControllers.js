@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../utils/prisma.js";
 
 import { existsSync, renameSync, unlinkSync } from "fs";
 
@@ -26,7 +26,10 @@ export const addGig = async (req, res, next) => {
           time,
           shortDesc,
         } = req.query;
-        const prisma = new PrismaClient();
+
+        if (parseInt(price) < 35) {
+          return res.status(400).send("Minimum price for a gig must be ₹35.");
+        }
 
         await prisma.gigs.create({
           data: {
@@ -56,7 +59,6 @@ export const addGig = async (req, res, next) => {
 export const getUserAuthGigs = async (req, res, next) => {
   try {
     if (req.userId) {
-      const prisma = new PrismaClient();
       const user = await prisma.user.findUnique({
         where: { id: req.userId },
         include: { gigs: true },
@@ -78,7 +80,6 @@ export const getGigData = async (req, res, next) => {
         return res.status(400).send("Invalid GigId provided.");
       }
       
-      const prisma = new PrismaClient();
       const gig = await prisma.gigs.findUnique({
         where: { id: gigId },
         include: {
@@ -152,7 +153,11 @@ export const editGig = async (req, res, next) => {
           time,
           shortDesc,
         } = req.query;
-        const prisma = new PrismaClient();
+
+        if (parseInt(price) < 35) {
+          return res.status(400).send("Minimum price for a gig must be ₹35.");
+        }
+
         const oldData = await prisma.gigs.findUnique({
           where: { id: parseInt(req.params.gigId) },
         });
@@ -187,7 +192,6 @@ export const editGig = async (req, res, next) => {
 
 export const searchGigs = async (req, res, next) => {
   try {
-    const prisma = new PrismaClient();
     const gigs = await prisma.gigs.findMany(
       createSearchQuery(req.query.searchTerm, req.query.category)
     );
@@ -236,7 +240,6 @@ const createSearchQuery = (searchTerm, category) => {
 
 const checkOrder = async (userId, gigId) => {
   try {
-    const prisma = new PrismaClient();
     const hasUserOrderedGig = await prisma.orders.findFirst({
       where: {
         buyerId: parseInt(userId),
@@ -265,13 +268,45 @@ export const checkGigOrder = async (req, res, next) => {
   }
 };
 
+export const deleteGig = async (req, res, next) => {
+  try {
+    if (req.userId && req.params.gigId) {
+      const gig = await prisma.gigs.findUnique({
+        where: { id: parseInt(req.params.gigId) },
+      });
+
+      if (!gig) {
+        return res.status(404).send("Gig not found.");
+      }
+
+      if (gig.userId !== req.userId) {
+        return res.status(403).send("You are not authorized to delete this gig.");
+      }
+
+      await prisma.gigs.delete({
+        where: { id: parseInt(req.params.gigId) },
+      });
+
+      // Cleanup images if needed
+      gig.images.forEach((image) => {
+        if (existsSync(`uploads/${image}`)) unlinkSync(`uploads/${image}`);
+      });
+
+      return res.status(200).send("Gig deleted successfully.");
+    }
+    return res.status(400).send("userId and gigId is required.");
+  } catch (err) {
+    console.log(err);
+    return res.status(500).send("Internal Server Error");
+  }
+};
+
 export const addReview = async (req, res, next) => {
   try {
     if (req.userId && req.params.gigId) {
       if (await checkOrder(req.userId, req.params.gigId)) {
         if (req.body.reviewText && req.body.rating) {
-          const prisma = new PrismaClient();
-          const newReview = await prisma.reviews.create({
+            const newReview = await prisma.reviews.create({
             data: {
               rating: req.body.rating,
               reviewText: req.body.reviewText,
