@@ -29,6 +29,16 @@ app.use("/uploads/profiles", express.static("uploads/profiles"));
 app.use(cookieParser());
 app.use(express.json());
 
+// Root route — friendly message when opening backend URL in browser
+app.get("/", (req, res) => {
+  res.status(200).json({
+    name: "Fiverr Clone API",
+    status: "running",
+    message: "Backend is live! Use the frontend at https://fiverrr-clone.vercel.app",
+    health: "/health",
+  });
+});
+
 // Health check endpoint — used by keep-alive ping and uptime monitors
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
